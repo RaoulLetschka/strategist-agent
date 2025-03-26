@@ -1,2 +1,5 @@
 streamlit
-openai
+openai-agents
+pydantic
+yfinance
+python-dotenv
