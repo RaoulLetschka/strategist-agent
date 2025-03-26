@@ -3,3 +3,4 @@ openai-agents
 pydantic
 yfinance
 python-dotenv
+asyncio

@@ -40,10 +40,14 @@ def app():
 
     main_app_sidebar()
 
-    st.title("Chatbot like ChatGPT")
+    st.title("Strategist Agent")
     st.sidebar.button("Clear Chat", on_click=lambda: st.session_state.update(messages=[]))
 
     competitors_agent.instructions = st.session_state.system_prompt
+
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
 
     if prompt := st.chat_input("Ask a question"):
         st.chat_message("user").markdown(prompt)
@@ -52,7 +56,7 @@ def app():
 
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
-            message_placeholder.markdown("Assistant is thinking ...")
+            message_placeholder.markdown("...")
         
         result = asyncio.run(Runner.run(competitors_agent, prompt))
         print(result)
