@@ -6,8 +6,8 @@ from agents import Runner, set_default_openai_key
 
 from custom_agents.competitors_agent import competitors_agent
 
-env_loaded = load_dotenv()
-set_default_openai_key(os.getenv("OPENAI_API_KEY"))
+# env_loaded = load_dotenv()
+# set_default_openai_key(os.getenv("OPENAI_API_KEY"))
 
 def initiate_default_session_state():
     if 'system_prompt' not in st.session_state:
