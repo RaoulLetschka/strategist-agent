@@ -57,7 +57,7 @@ def dynamic_instructions(system_prompt: str) -> str:
     return system_prompt
 
 competitors_agent = Agent(
-    name="Determine competitors of a company by industry",
+    name="Competitors Agent",
     instructions=dynamic_instructions,
     model='gpt-4o-mini-2024-07-18',
     tools=[

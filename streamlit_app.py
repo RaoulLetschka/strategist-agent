@@ -2,12 +2,12 @@ import os
 import asyncio
 import streamlit as st
 from dotenv import load_dotenv
-from agents import Runner, set_default_openai_key
-
+from agents import Runner, set_default_openai_key, ItemHelpers
+from openai.types.responses import ResponseTextDeltaEvent
 from custom_agents.competitors_agent import competitors_agent
 
-# env_loaded = load_dotenv()
-# set_default_openai_key(os.getenv("OPENAI_API_KEY"))
+env_loaded = load_dotenv()
+set_default_openai_key(os.getenv("OPENAI_API_KEY"))
 
 def initiate_default_session_state():
     if 'system_prompt' not in st.session_state:
@@ -35,7 +35,7 @@ The company has provided you with the the name of the company or the Yahoo Finan
 Your goal is to make a competitor analysis with the SWOT framework.
 """
 
-def app():
+async def app():
     initiate_default_session_state()
 
     main_app_sidebar()
@@ -54,14 +54,24 @@ def app():
 
         st.session_state.messages.append({"role": "user", "content": prompt})
 
+        result = Runner.run_streamed(competitors_agent, prompt)
+
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             message_placeholder.markdown("...")
-        
-        result = asyncio.run(Runner.run(competitors_agent, prompt))
-        print(result)
-        message_placeholder.markdown(result.final_output, unsafe_allow_html=True)
-        st.session_state.messages.append({"role": "assistant", "content": result.final_output})
+
+            answer = ""
+            async for event in result.stream_events():
+                if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                    answer += event.data.delta
+                    message_placeholder.markdown(answer, unsafe_allow_html=True)
+                # elif event.type == "run_item_stream_event":
+                #     if event.item.type == "tool_call_output_item":
+                #         print(f"-- Tool output: {event.item.output}")
+                #         message_placeholder.markdown(str(event.item.output), unsafe_allow_html=True)
+                #         st.session_state.messages.append({"role": "assistant", "content": str(event.item.output)})
+
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
 if __name__ == "__main__":
-    app()
+    asyncio.run(app())
