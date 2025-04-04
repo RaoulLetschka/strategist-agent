@@ -14,5 +14,6 @@ search_agent = Agent(
     name="FinancialSearchAgent",
     instructions=INSTRUCTIONS,
     tools=[WebSearchTool()],
+    model='gpt-4o-mini-2024-07-18',
     model_settings=ModelSettings(tool_choice="required"),
 )

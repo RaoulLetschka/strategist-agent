@@ -19,5 +19,6 @@ class AnalysisSummary(BaseModel):
 financials_agent = Agent(
     name="FundamentalsAnalystAgent",
     instructions=FINANCIALS_PROMPT,
+    model='gpt-4o-mini-2024-07-18',
     output_type=AnalysisSummary,
 )
