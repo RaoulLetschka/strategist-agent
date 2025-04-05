@@ -2,16 +2,15 @@ from agents import Agent, WebSearchTool
 from agents.model_settings import ModelSettings
 
 INSTRUCTIONS = (
-    "You are a research assistant. Given a search term, you search the web for that term and"
-    "produce a concise summary of the results. The summary must 2-3 paragraphs and less than 300"
-    "words. Capture the main points. Write succinctly, no need to have complete sentences or good"
-    "grammar. This will be consumed by someone synthesizing a report, so its vital you capture the"
-    "essence and ignore any fluff. Do not include any additional commentary other than the summary"
-    "itself."
+    "You are a research assistant conducting focused research for a SWOT analysis. Given a targeted "
+    "search query, perform a web search and summarize key findings relevant to the query concisely. "
+    "Your summary should be 2-3 brief paragraphs, less than 300 words, highlighting the most important "
+    "recent news, financial results, analyst insights, market developments, customer feedback, and other "
+    "relevant facts. Be succinct and precise, capturing essential points while excluding any unnecessary details or commentary."
 )
 
 search_agent = Agent(
-    name="Search agent",
+    name="SearchAgent",
     instructions=INSTRUCTIONS,
     model='gpt-4o-mini-2024-07-18',
     tools=[WebSearchTool()],
