@@ -45,13 +45,9 @@ class SWOTAnalysisManager:
         :param prompt: The prompt to execute.
         :return: An async generator that yields the streamed output.
         """
-        search_plan = await self._plan_searches(query)
-        print(f"Search plan: {search_plan}")
-        search_results = await self._perform_searches(search_plan)
-        print(f"Search results: {search_results}")
-        report = await self._write_report(query, search_results)
-        print(f"Report: {report}")
-        return Runner.run_streamed(self.swot_agent, report)
+        planner_result = await self.planner_agent.execute(f"Query: {query}")
+        search_plan = await self.perform_search(planner_result)
+        return self.perform_swot_analysis(query, search_plan)
 
     async def run(self, query: str) -> None:
         trace_id = gen_trace_id()
@@ -84,6 +80,24 @@ class SWOTAnalysisManager:
         # print("\n".join(report.follow_up_questions))
         # print("\n\n=====VERIFICATION=====\n\n")
         # print(verification)
+
+    async def perform_swot_analysis(self, query: str, search_resutls: str):
+        input_data = f"Original query: {query}\nSummarized search results: {search_resutls}"
+        return await self.swot_agent.execute_streamed(input_data, max_turns=20)
+
+    async def perform_search(self, planner_result) -> str:
+        tasks = [asyncio.create_task(self.search(item)) for item in planner_result.final_output_as(WebSearchPlan).searches]
+        with custom_span("Search for all items"):
+            search_resutls = []
+            for task in asyncio.as_completed(tasks):
+                result = await task
+                search_resutls.append(result)
+            return search_resutls
+
+    async def search(self, item: WebSearchItem):
+        input_data = f"Search term: {item.query}\nReason: {item.reason}\n"
+        result = await self.search_agent.execute(input_data)
+        return result.final_output
 
     async def _plan_searches(self, query: str) -> WebSearchPlan:
         result = await PlannerAgent().execute(f"Query: {query}")

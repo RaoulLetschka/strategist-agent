@@ -36,6 +36,22 @@ model_options = {
     "o3-mini": settings.o3_mini_deployment,
 }
 
+async def stream_results(result, message_placeholder):
+    answer = ""
+    async for event in result.stream_events():
+        if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+            answer += event.data.delta
+            message_placeholder.markdown(answer, unsafe_allow_html=True)
+    return answer
+
+async def stream_chat_message(result):
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        message_placeholder.markdown("...")
+        return await stream_results(result, message_placeholder)
+    
+
+
 def main_app_sidebar():
     st.sidebar.title("Choose Agent")
     st.session_state.selected_agent = st.sidebar.radio(
@@ -99,38 +115,24 @@ async def app():
         st.chat_message("user").markdown(prompt)
 
         st.session_state.messages.append({"role": "user", "content": prompt})
-
-        chosen_agent: BaseAgent = BaseAgent(
-            name="Chatbot Agent",
-            deployment=model_options[st.session_state.model],
-        )
+        answer = "THIS SHOULD NOT BE SEEN"
         if st.session_state.selected_agent == "Competitors Agent":
             # TODO: refactor competitor agent to use the new agent system
             chosen_agent = competitors_agent
         elif st.session_state.selected_agent == "SWOT Agent":
             # TODO: refactor SWOTAnalysisManager class to use the new agent system
             chosen_agent = SWOTAnalysisManager()
-        
-            
-        result = chosen_agent.execute_streamed(st.session_state.messages)
-        print(f"Result: {await result}")
-
-        with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            message_placeholder.markdown("...")
-
-            answer = ""
-            async for event in result.stream_events():
-                if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
-                    answer += event.data.delta
-                    message_placeholder.markdown(answer, unsafe_allow_html=True)
-                # elif event.type == "run_item_stream_event":
-                #     if event.item.type == "tool_call_output_item":
-                #         print(f"-- Tool output: {event.item.output}")
-                #         message_placeholder.markdown(str(event.item.output), unsafe_allow_html=True)
-                #         st.session_state.messages.append({"role": "assistant", "content": str(event.item.output)})
-
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+            planner_result = chosen_agent.planner_agent.execute_streamed(f"Query: {prompt}")
+            planner_answer = await stream_chat_message(planner_result)
+            st.session_state.messages.append({"role": "assistant", "content": planner_answer})
+        else:
+            chosen_agent = BaseAgent(
+                name="Chatbot Agent",
+                deployment=model_options[st.session_state.model],
+            )
+            result = chosen_agent.execute_streamed(st.session_state.messages)
+            answer = await stream_chat_message(result)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
 
 
 if __name__ == "__main__":

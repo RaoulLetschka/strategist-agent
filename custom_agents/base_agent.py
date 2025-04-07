@@ -4,7 +4,7 @@ from .models.azure_openai_client import AzureOpenAIClient
 from openai import AsyncAzureOpenAI
 from .config import settings
 
-set_tracing_disabled(disabled=True)
+set_tracing_disabled(disabled=False)
 
 class BaseAgent:
     def __init__(
@@ -26,12 +26,12 @@ class BaseAgent:
         self.name = name
         self.model = model
 
-        external_client = AsyncAzureOpenAI(
-            azure_endpoint=settings.azure_openai_endpoint,
-            azure_deployment=deployment,
-            api_version=settings.azure_openai_api_version,
-            api_key=settings.azure_openai_api_key
-        )
+        # external_client = AsyncAzureOpenAI(
+        #     azure_endpoint=settings.azure_openai_endpoint,
+        #     azure_deployment=deployment,
+        #     api_version=settings.azure_openai_api_version,
+        #     api_key=settings.azure_openai_api_key
+        # )
 
         if model is None:
             self.agent = Agent(
@@ -39,7 +39,7 @@ class BaseAgent:
                 instructions=instructions,
                 model=OpenAIChatCompletionsModel(
                     model=deployment,
-                    openai_client=external_client,
+                    openai_client=AzureOpenAIClient.create_async_client(deployment),
                 ),
                 output_type=output_type,
                 **kwargs
