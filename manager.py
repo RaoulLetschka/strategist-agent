@@ -15,10 +15,10 @@ from agents import (
     trace
 )
 
-from custom_agents.helper_agents.planner_agent import WebSearchItem, WebSearchPlan, planner_agent
-from custom_agents.helper_agents.search_agent import search_agent
+from custom_agents.planner_agent import WebSearchItem, WebSearchPlan, PlannerAgent
+from custom_agents.search_agent import SearchAgent
 # from .custom_agents.helper_agents.writer_agent import FinancialReportData, writer_agent
-from custom_agents.swot_agent import swot_agent, SWOTAnalysisResult
+from custom_agents.swot_agent import SWOTAnalysisResult, SWOTAgent
 from custom_agents.printer import Printer
 
 async def _summary_extractor(run_result: RunResult) -> str:
@@ -59,6 +59,7 @@ class SWOTAnalysisManager:
 
         # Print to stdout
         print("\n\n=====REPORT=====\n\n")
+        print(f"SWOT summary:\n{report.swot_summary}\n")
         print(f"Strengths:\n{report.strengths}\n")
         print(f"Weaknesses:\n{report.weaknesses}\n")
         print(f"Opportunities:\n{report.opportunities}\n")
@@ -70,7 +71,7 @@ class SWOTAnalysisManager:
 
     async def _plan_searches(self, query: str) -> WebSearchPlan:
         self.printer.update_item("planning", "Planning searches...")
-        result = await Runner.run(planner_agent, f"Query: {query}")
+        result = await PlannerAgent().execute(f"Query: {query}")
         self.printer.update_item(
             "planning",
             f"Will perform {len(result.final_output.searches)} searches",
@@ -98,7 +99,7 @@ class SWOTAnalysisManager:
     async def _search(self, item: WebSearchItem) -> str | None:
         input_data = f"Search term: {item.query}\nReason: {item.reason}"
         try:
-            result = await Runner.run(search_agent, input_data)
+            result = await SearchAgent().execute(input_data)
             return str(result.final_output)
         except Exception:
             return None
@@ -119,7 +120,7 @@ class SWOTAnalysisManager:
         # writer_with_tools = writer_agent.clone(tools=[fundamentals_tool, risk_tool])
         self.printer.update_item("writing", "Thinking about SWOT...")
         input_data = f"Original query: {query}\nSummarized search results: {search_results}"
-        result = Runner.run_streamed(swot_agent, input_data)
+        result = Runner.run_streamed(SWOTAgent().agent, input_data)
         update_messages = [
             "Planning report structure...",
             "Writing sections...",
