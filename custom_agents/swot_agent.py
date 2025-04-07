@@ -49,7 +49,7 @@ class SWOTAgent(BaseAgent):
         super().__init__(
             name="SWOTAgent",
             instructions=self.INSTRUCTIONS,
-            deployment=settings.gpt4o_mini_deployment,
+            deployment=settings.o3_mini_deployment,
             tools=[
                 SWOTCategoryAgent("STRENGTHS").agent.as_tool(
                     tool_name="strengths_analysis_tool",

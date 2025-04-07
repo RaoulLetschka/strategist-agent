@@ -113,6 +113,7 @@ async def app():
         
             
         result = chosen_agent.execute_streamed(st.session_state.messages)
+        print(f"Result: {await result}")
 
         with st.chat_message("assistant"):
             message_placeholder = st.empty()

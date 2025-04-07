@@ -14,6 +14,7 @@ from agents import (
     gen_trace_id, 
     trace
 )
+import streamlit as st
 
 from custom_agents.planner_agent import WebSearchItem, WebSearchPlan, PlannerAgent
 from custom_agents.search_agent import SearchAgent
@@ -34,8 +35,23 @@ class SWOTAnalysisManager:
     """
 
     def __init__(self) -> None:
-        self.console = Console()
-        self.printer = Printer(self.console)
+        self.search_agent = SearchAgent()
+        self.planner_agent = PlannerAgent()
+        self.swot_agent = SWOTAgent()
+
+    async def execute_streamed(self, query: str, messages: str | None = None) -> str:
+        """
+        Execute the agent with the given prompt and stream the output.
+        :param prompt: The prompt to execute.
+        :return: An async generator that yields the streamed output.
+        """
+        search_plan = await self._plan_searches(query)
+        print(f"Search plan: {search_plan}")
+        search_results = await self._perform_searches(search_plan)
+        print(f"Search results: {search_results}")
+        report = await self._write_report(query, search_results)
+        print(f"Report: {report}")
+        return Runner.run_streamed(self.swot_agent, report)
 
     async def run(self, query: str) -> None:
         trace_id = gen_trace_id()
@@ -70,18 +86,11 @@ class SWOTAnalysisManager:
         # print(verification)
 
     async def _plan_searches(self, query: str) -> WebSearchPlan:
-        self.printer.update_item("planning", "Planning searches...")
         result = await PlannerAgent().execute(f"Query: {query}")
-        self.printer.update_item(
-            "planning",
-            f"Will perform {len(result.final_output.searches)} searches",
-            is_done=True,
-        )
         return result.final_output_as(WebSearchPlan)
 
     async def _perform_searches(self, search_plan: WebSearchPlan) -> Sequence[str]:
         with custom_span("Search the web"):
-            self.printer.update_item("searching", "Searching...")
             tasks = [asyncio.create_task(self._search(item)) for item in search_plan.searches]
             results: list[str] = []
             num_completed = 0
@@ -90,10 +99,6 @@ class SWOTAnalysisManager:
                 if result is not None:
                     results.append(result)
                 num_completed += 1
-                self.printer.update_item(
-                    "searching", f"Searching... {num_completed}/{len(tasks)} completed"
-                )
-            self.printer.mark_item_done("searching")
             return results
 
     async def _search(self, item: WebSearchItem) -> str | None:
@@ -105,35 +110,8 @@ class SWOTAnalysisManager:
             return None
 
     async def _write_report(self, query: str, search_results: Sequence[str]) -> SWOTAnalysisResult:
-        # Expose the specialist analysts as tools so the writer can invoke them inline
-        # and still produce the final FinancialReportData output.
-        # fundamentals_tool = financials_agent.as_tool(
-        #     tool_name="fundamentals_analysis",
-        #     tool_description="Use to get a short write‑up of key financial metrics",
-        #     custom_output_extractor=_summary_extractor,
-        # )
-        # risk_tool = risk_agent.as_tool(
-        #     tool_name="risk_analysis",
-        #     tool_description="Use to get a short write‑up of potential red flags",
-        #     custom_output_extractor=_summary_extractor,
-        # )
-        # writer_with_tools = writer_agent.clone(tools=[fundamentals_tool, risk_tool])
-        self.printer.update_item("writing", "Thinking about SWOT...")
         input_data = f"Original query: {query}\nSummarized search results: {search_results}"
         result = Runner.run_streamed(SWOTAgent().agent, input_data)
-        update_messages = [
-            "Planning report structure...",
-            "Writing sections...",
-            "Finalizing report...",
-        ]
-        last_update = time.time()
-        next_message = 0
-        async for _ in result.stream_events():
-            if time.time() - last_update > 5 and next_message < len(update_messages):
-                self.printer.update_item("writing", update_messages[next_message])
-                next_message += 1
-                last_update = time.time()
-        self.printer.mark_item_done("writing")
         return result.final_output_as(SWOTAnalysisResult)
 
     # async def _verify_report(self, report: FinancialReportData) -> VerificationResult:

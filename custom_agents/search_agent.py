@@ -24,7 +24,10 @@ class SearchAgent(BaseAgent):
         super().__init__(
             name="SearchAgent",
             instructions=self.INSTRUCTIONS,
-            deployment=settings.gpt4o_mini_deployment,
+            # TODO: The OpenAIChatCompletionsModel is not used here, because the model cannot handle the WebSearchTool.
+            # Instead, we use the WebSearchTool directly in the agent.
+            # deployment=settings.gpt4o_mini_deployment,
+            model=settings.gpt4o_mini_deployment,
             model_settings=ModelSettings(tool_choice="required"),
             tools=[WebSearchTool()],
         )
