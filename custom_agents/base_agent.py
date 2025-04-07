@@ -1,13 +1,13 @@
 # base.py
-import os
 from agents import Agent, OpenAIChatCompletionsModel, Runner
 from .models.azure_openai_client import AzureOpenAIClient
+from .config import settings
 
 class BaseAgent:
     def __init__(
         self,
         name: str,
-        deployment: str = os.getenv("GPT4O_MINI_DEPLOYMENT"),
+        deployment: str = settings.gpt4o_mini_deployment,
         instructions: str | None = None,
         output_type = None,
         model = None,

@@ -1,11 +1,10 @@
-import os 
 from pydantic import BaseModel
 from typing import Literal, Tuple
 
 from agents import Agent, function_tool, ModelSettings
 from .base_agent import BaseAgent
 from .swot_category_agents import SWOTCategoryAgent
-
+from .config import settings
 
 class SWOTAnalysisResult(BaseModel):
     strengths: str
@@ -50,7 +49,7 @@ class SWOTAgent(BaseAgent):
         super().__init__(
             name="SWOTAgent",
             instructions=self.INSTRUCTIONS,
-            deployment=os.getenv("GPT4O_MINI_DEPLOYMENT"),
+            deployment=settings.gpt4o_mini_deployment,
             tools=[
                 SWOTCategoryAgent("STRENGTHS").agent.as_tool(
                     tool_name="strengths_analysis_tool",

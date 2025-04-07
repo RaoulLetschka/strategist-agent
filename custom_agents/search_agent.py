@@ -1,8 +1,7 @@
-import os
 from agents import WebSearchTool
 from agents.model_settings import ModelSettings
 from .base_agent import BaseAgent
-
+from .config import settings
 
 class SearchAgent(BaseAgent):
     INSTRUCTIONS = (
@@ -25,7 +24,7 @@ class SearchAgent(BaseAgent):
         super().__init__(
             name="SearchAgent",
             instructions=self.INSTRUCTIONS,
-            deployment=os.getenv("GPT4O_MINI_DEPLOYMENT"),
+            deployment=settings.gpt4o_mini_deployment,
             model_settings=ModelSettings(tool_choice="required"),
             tools=[WebSearchTool()],
         )

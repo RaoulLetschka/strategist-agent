@@ -1,6 +1,8 @@
 # config.py
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+SWOT_CATEGORIES = ['STRENGHTS', 'WEAKNESSES', 'OPPORTUNITIES', 'THREATS']
+
 class Settings(BaseSettings):
     azure_openai_api_key: str
     azure_openai_endpoint: str

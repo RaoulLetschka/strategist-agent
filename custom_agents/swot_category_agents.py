@@ -1,8 +1,8 @@
-import os
 from pydantic import BaseModel
 from typing import Literal
 
 from .base_agent import BaseAgent
+from .config import settings
 
 class SWOTCategoryResult(BaseModel):
     category: Literal["STRENGTHS", "WEAKNESSES", "OPPORTUNITIES", "THREATS"]
@@ -33,6 +33,6 @@ class SWOTCategoryAgent(BaseAgent):
         super().__init__(
             name="SWOTCategoryAgent",
             instructions=self.INSTRUCTIONS,
-            deployment=os.getenv("GPT4O_MINI_DEPLOYMENT"),
+            deployment=settings.gpt4o_mini_deployment,
             output_type=SWOTCategoryResult,
         )

@@ -1,11 +1,8 @@
 from pydantic import BaseModel
-from dotenv import load_dotenv
-import os
 from agents import Agent
 
 from .base_agent import BaseAgent
-
-_ = load_dotenv()
+from .config import settings
 
 class WebSearchItem(BaseModel):
     reason: str
@@ -42,6 +39,6 @@ class PlannerAgent(BaseAgent):
         super().__init__(
             name="PlannerAgent",
             instructions=self.INSTRUCTIONS,
-            deployment=os.getenv("O3_MINI_DEPLOYMENT"),
+            deployment=settings.o3_mini_deployment,
             output_type=WebSearchPlan,
         )
