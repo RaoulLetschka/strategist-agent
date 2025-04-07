@@ -7,6 +7,9 @@ from openai.types.responses import ResponseTextDeltaEvent
 from custom_agents.competitors_agent import competitors_agent
 from manager import SWOTAnalysisManager
 
+from custom_agents.base_agent import BaseAgent
+from custom_agents.config import settings
+
 env_loaded = load_dotenv()
 set_default_openai_key(os.getenv("OPENAI_API_KEY"))
 
@@ -20,25 +23,25 @@ def initiate_default_session_state():
     if 'selected_agent' not in st.session_state:
         st.session_state.selected_agent = 0
 
-agent_selectbox_options = [
+agent_options = [
     "Chatbot Agent",
     "Competitors Agent",
     "SWOT Agent",
     # "Financial Research Agent",
 ]
 
-model_selectbox_options = [
-    "gpt-4o-mini",
-    "gpt-4o",
-    "o3-mini",
-]
+model_options = {
+    "gpt-4o-mini": settings.gpt4o_mini_deployment,
+    "gpt-4o": settings.gpt4o_deployment,
+    "o3-mini": settings.o3_mini_deployment,
+}
 
 def main_app_sidebar():
     st.sidebar.title("Choose Agent")
-    st.session_state.selected_agent = st.sidebar.selectbox(
+    st.session_state.selected_agent = st.sidebar.radio(
         "Select an agent",
-        options=agent_selectbox_options,
-        index=agent_selectbox_options.index("Chatbot Agent"),
+        options=agent_options,
+        index=agent_options.index("Chatbot Agent"),
     )
 
     if st.session_state.selected_agent == "Competitors Agent":
@@ -54,11 +57,11 @@ def main_app_sidebar():
 
     if st.session_state.selected_agent == "Chatbot Agent":
         st.sidebar.title("Choose Model")
-        st.session_state.model = st.sidebar.selectbox(
+        st.session_state.model = st.sidebar.radio(
             "Select a model",
-            options=model_selectbox_options,
-            index=model_selectbox_options.index("gpt-4o-mini"),
+            options=model_options
         )
+
         # TODO: Decide if we want to keep this
         # st.session_state.temperature = st.sidebar.slider(
         #     "Temperature",
@@ -97,17 +100,19 @@ async def app():
 
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        chosen_agent: Agent = Agent(
+        chosen_agent: BaseAgent = BaseAgent(
             name="Chatbot Agent",
-            model=st.session_state.model,
+            deployment=model_options[st.session_state.model],
         )
         if st.session_state.selected_agent == "Competitors Agent":
+            # TODO: refactor competitor agent to use the new agent system
             chosen_agent = competitors_agent
         elif st.session_state.selected_agent == "SWOT Agent":
+            # TODO: refactor SWOTAnalysisManager class to use the new agent system
             chosen_agent = SWOTAnalysisManager()
         
             
-        result = Runner.run_streamed(chosen_agent, st.session_state.messages)
+        result = chosen_agent.execute_streamed(st.session_state.messages)
 
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
@@ -125,6 +130,7 @@ async def app():
                 #         st.session_state.messages.append({"role": "assistant", "content": str(event.item.output)})
 
         st.session_state.messages.append({"role": "assistant", "content": answer})
-        print(st.session_state.messages)
+
+
 if __name__ == "__main__":
     asyncio.run(app())

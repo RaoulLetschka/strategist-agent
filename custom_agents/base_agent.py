@@ -57,6 +57,20 @@ class BaseAgent:
             raise ValueError("Prompt is required.")
         return await Runner.run(self.agent, prompt)
     
+    def execute_streamed(self, prompt: str):
+        """
+        Execute the agent with the given prompt and stream the output.
+        :param prompt: The prompt to execute.
+        :return: An async generator that yields the streamed output.
+        """
+        # Ensure the agent is initialized
+        if not self.agent:
+            raise ValueError("Agent is not initialized.")
+        # Ensure the prompt is provided
+        if not prompt:
+            raise ValueError("Prompt is required.")
+        return Runner.run_streamed(self.agent, prompt)
+    
     def __str__(self):
         return f"Agent: {self.name}, Model: {self.model}, Instructions: {self.agent.instructions}"
     
