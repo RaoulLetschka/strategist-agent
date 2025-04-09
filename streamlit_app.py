@@ -1,17 +1,17 @@
 import os
 import asyncio
 import streamlit as st
-from dotenv import load_dotenv
-from agents import Runner, set_default_openai_key, ItemHelpers, Agent
+from agents import Runner, set_default_openai_key, set_tracing_export_api_key, gen_trace_id, trace
 from openai.types.responses import ResponseTextDeltaEvent
 from custom_agents.competitors_agent import competitors_agent
 from manager import SWOTAnalysisManager
 
 from custom_agents.base_agent import BaseAgent
+from custom_agents.planner_agent import WebSearchPlan
 from custom_agents.config import settings
 
-env_loaded = load_dotenv()
-set_default_openai_key(os.getenv("OPENAI_API_KEY"))
+set_default_openai_key(settings.openai_api_key)
+set_tracing_export_api_key(settings.openai_api_key)
 
 def initiate_default_session_state():
     if 'system_prompt' not in st.session_state:
@@ -49,7 +49,6 @@ async def stream_chat_message(result):
         message_placeholder = st.empty()
         message_placeholder.markdown("...")
         return await stream_results(result, message_placeholder)
-    
 
 
 def main_app_sidebar():
@@ -106,7 +105,6 @@ async def app():
         st.button("Clear Chat", on_click=lambda: st.session_state.update(messages=[]))
 
     competitors_agent.instructions = st.session_state.system_prompt
-    print(st.session_state.messages)
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"], unsafe_allow_html=True)
@@ -116,23 +114,64 @@ async def app():
 
         st.session_state.messages.append({"role": "user", "content": prompt})
         answer = "THIS SHOULD NOT BE SEEN"
+
+        trace_id = gen_trace_id()
+        
         if st.session_state.selected_agent == "Competitors Agent":
-            # TODO: refactor competitor agent to use the new agent system
-            chosen_agent = competitors_agent
+            with trace("Competitors Agent Trace", trace_id=trace_id):
+                # TODO: refactor competitor agent to use the new agent system
+                competitors_agent_result = Runner.run_streamed(competitors_agent, prompt)
+                competitors_agent_answer = await stream_chat_message(competitors_agent_result)
+                st.session_state.messages.append({"role": "assistant", "content": competitors_agent_answer})
+
         elif st.session_state.selected_agent == "SWOT Agent":
-            # TODO: refactor SWOTAnalysisManager class to use the new agent system
-            chosen_agent = SWOTAnalysisManager()
-            planner_result = chosen_agent.planner_agent.execute_streamed(f"Query: {prompt}")
-            planner_answer = await stream_chat_message(planner_result)
-            st.session_state.messages.append({"role": "assistant", "content": planner_answer})
+            with trace("SWOT Agent Trace", trace_id=trace_id):
+                chosen_agent = SWOTAnalysisManager()
+                with st.chat_message("assistant"):
+                    message_placeholder = st.empty()
+                    message_placeholder.markdown("...")
+                    planner_result = await chosen_agent.planner_agent.execute(f"Query: {prompt}")
+                    n = 1
+                    planner_answer = "### Planner Agent's Result:\n"
+                    for item in planner_result.final_output.searches:
+                        planner_answer += f"{n}. **Search Query:** {item.query}   \n   **Reason:** {item.reason}\n"
+                        n += 1
+                    message_placeholder.markdown(planner_answer, unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": planner_answer})
+
+                with st.chat_message("assistant"):
+                    message_placeholder = st.empty()
+                    message_placeholder.markdown("...")
+                    search_plan = await chosen_agent.perform_search(planner_result)
+                    search_answer = "## Search Agent's Result:\n"
+                    for search in search_plan:
+                        search_answer += search
+                    message_placeholder.markdown(search_answer, unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": search_answer})
+
+                with st.chat_message("assistant"):
+                    message_placeholder = st.empty()
+                    message_placeholder.markdown("...")
+                    swot_result = await chosen_agent.perform_swot_analysis(prompt, str(search_plan))
+                    swot_answer = (
+                        "## SWOT Agent's Result:  \n  "
+                        f"### SWOT Summary:\n   {swot_result.final_output.swot_summary}   \n   "
+                        f"### Strenghts:\n   {swot_result.final_output.strengths}   \n   "
+                        f"### Weaknesses:\n   {swot_result.final_output.weaknesses}   \n   "
+                        f"### Opportunities:\n   {swot_result.final_output.opportunities}   \n   "
+                        f"### Threats:\n   {swot_result.final_output.threats}   \n   "
+                    )
+                    message_placeholder.markdown(swot_answer)
+                st.session_state.messages.append({"role": "assistant", "content": swot_answer})
         else:
-            chosen_agent = BaseAgent(
-                name="Chatbot Agent",
-                deployment=model_options[st.session_state.model],
-            )
-            result = chosen_agent.execute_streamed(st.session_state.messages)
-            answer = await stream_chat_message(result)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+            with trace("Chatbot Agent Trace", trace_id=trace_id):
+                chosen_agent = BaseAgent(
+                    name="Chatbot Agent",
+                    deployment=model_options[st.session_state.model],
+                )
+                result = chosen_agent.execute_streamed(st.session_state.messages)
+                answer = await stream_chat_message(result)
+                st.session_state.messages.append({"role": "assistant", "content": answer})
 
 
 if __name__ == "__main__":

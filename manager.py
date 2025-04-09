@@ -83,7 +83,11 @@ class SWOTAnalysisManager:
 
     async def perform_swot_analysis(self, query: str, search_resutls: str):
         input_data = f"Original query: {query}\nSummarized search results: {search_resutls}"
-        return await self.swot_agent.execute_streamed(input_data, max_turns=20)
+        return await self.swot_agent.execute(input_data, max_turns=20)
+    
+    def perform_swot_analysis_streamed(self, query: str, search_resutls: str):
+        input_data = f"Original query: {query}\nSummarized search results: {search_resutls}"
+        return self.swot_agent.execute_streamed(input_data)
 
     async def perform_search(self, planner_result) -> str:
         tasks = [asyncio.create_task(self.search(item)) for item in planner_result.final_output_as(WebSearchPlan).searches]
@@ -98,6 +102,10 @@ class SWOTAnalysisManager:
         input_data = f"Search term: {item.query}\nReason: {item.reason}\n"
         result = await self.search_agent.execute(input_data)
         return result.final_output
+    
+    def search_streamed(self, item: WebSearchItem):
+        input_data = f"Search term: {item.query}\nReason: {item.reason}\n"
+        return self.search_agent.execute_streamed(input_data)
 
     async def _plan_searches(self, query: str) -> WebSearchPlan:
         result = await PlannerAgent().execute(f"Query: {query}")

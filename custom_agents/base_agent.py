@@ -1,10 +1,7 @@
 # base.py
-from agents import Agent, OpenAIChatCompletionsModel, Runner, set_tracing_disabled, OpenAIResponsesModel
+from agents import Agent, OpenAIChatCompletionsModel, Runner
 from .models.azure_openai_client import AzureOpenAIClient
-from openai import AsyncAzureOpenAI
 from .config import settings
-
-set_tracing_disabled(disabled=False)
 
 class BaseAgent:
     def __init__(
@@ -25,13 +22,7 @@ class BaseAgent:
         """
         self.name = name
         self.model = model
-
-        # external_client = AsyncAzureOpenAI(
-        #     azure_endpoint=settings.azure_openai_endpoint,
-        #     azure_deployment=deployment,
-        #     api_version=settings.azure_openai_api_version,
-        #     api_key=settings.azure_openai_api_key
-        # )
+        self.output_type = output_type
 
         if model is None:
             self.agent = Agent(
@@ -67,7 +58,7 @@ class BaseAgent:
             raise ValueError("Prompt is required.")
         return await Runner.run(self.agent, prompt, max_turns=max_turns)
     
-    def execute_streamed(self, prompt: str):
+    def execute_streamed(self, prompt: str, max_turns: int = 10):
         """
         Execute the agent with the given prompt and stream the output.
         :param prompt: The prompt to execute.
@@ -79,7 +70,7 @@ class BaseAgent:
         # Ensure the prompt is provided
         if not prompt:
             raise ValueError("Prompt is required.")
-        return Runner.run_streamed(self.agent, prompt)
+        return Runner.run_streamed(self.agent, prompt, max_turns=max_turns)
     
     def __str__(self):
         return f"Agent: {self.name}, Model: {self.model}, Instructions: {self.agent.instructions}"
