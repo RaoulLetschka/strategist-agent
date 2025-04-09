@@ -1,9 +1,12 @@
 from pydantic import BaseModel
 from typing import Literal, Tuple
 
-from agents import Agent, function_tool
+from agents import Agent, function_tool, OpenAIChatCompletionsModel
 import yfinance as yf
 from yfinance.const import SECTOR_INDUSTY_MAPPING, EQUITY_SCREENER_FIELDS
+from .models.azure_openai_client import AzureOpenAIClient
+from .config import settings
+
 
 class SectorIndustryMapping(BaseModel):
     sector: str
@@ -59,7 +62,10 @@ def dynamic_instructions(system_prompt: str) -> str:
 competitors_agent = Agent(
     name="Competitors Agent",
     instructions=dynamic_instructions,
-    model='gpt-4o-mini-2024-07-18',
+    model=OpenAIChatCompletionsModel(
+        model=settings.gpt4o_mini_deployment,
+        openai_client=AzureOpenAIClient.create_async_client(settings.gpt4o_mini_deployment),
+    ),
     tools=[
         get_ticker_agent.as_tool(
             tool_name="get_ticker",
