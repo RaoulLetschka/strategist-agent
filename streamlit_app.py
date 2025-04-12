@@ -120,7 +120,7 @@ async def app():
         if st.session_state.selected_agent == "Competitors Agent":
             with trace("Competitors Agent Trace", trace_id=trace_id):
                 # TODO: refactor competitor agent to use the new agent system
-                competitors_agent_result = Runner.run_streamed(competitors_agent, prompt)
+                competitors_agent_result = Runner.run_streamed(competitors_agent, st.session_state.messages)
                 competitors_agent_answer = await stream_chat_message(competitors_agent_result)
                 st.session_state.messages.append({"role": "assistant", "content": competitors_agent_answer})
 
@@ -130,7 +130,7 @@ async def app():
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    planner_result = await chosen_agent.planner_agent.execute(f"Query: {prompt}")
+                    planner_result = await chosen_agent.planner_agent.execute(f"Query: {st.session_state.messages}")
                     n = 1
                     planner_answer = "### Planner Agent's Result:\n"
                     for item in planner_result.final_output.searches:
@@ -152,7 +152,7 @@ async def app():
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    swot_result = await chosen_agent.perform_swot_analysis(prompt, str(search_plan))
+                    swot_result = await chosen_agent.perform_swot_analysis(st.session_state.messages, str(search_plan))
                     swot_answer = (
                         "## SWOT Agent's Result:  \n  "
                         f"### SWOT Summary:\n   {swot_result.final_output.swot_summary}   \n   "
