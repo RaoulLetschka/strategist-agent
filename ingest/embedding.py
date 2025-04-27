@@ -16,9 +16,11 @@ def generate_embedding(text: str):
     Returns:
         List[float]: The embedding vector.
     """
+    print(f"-- Generating embedding for text length: {len(text)}")
     response = openai.embeddings.create(
         model=settings.embedding_3_small_deployment,
         input=text
     )
-    # print(f"Embedding response: {response.data[0].embedding}")
-    return response.data[0].embedding
+    print(f"-- Embedding response: {response.usage}")
+    token_text_ratio = response.usage.total_tokens / len(text) 
+    return response.data[0].embedding, token_text_ratio
