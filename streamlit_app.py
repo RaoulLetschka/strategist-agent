@@ -87,11 +87,34 @@ def main_app_sidebar():
         #     format="%.1f",
         # )
 
-original_system_prompt = """You are an expert strategist for a company. 
-You are tasked with determining the top competitors for the company based on its sector or industry.
+original_system_prompt_OLD = """You are an expert strategist for a company. 
+You are tasked with determining the competitors for the company based on its sector or industry.
 The company has provided you with the the name of the company or the Yahoo Finance ticker symbol of the company. 
 Your goal is to make a competitor analysis with the SWOT framework.
 """
+
+original_system_prompt = """Role: You are an expert business strategist conducting a competitor analysis.
+
+Objective: Use the SWOT (Strengths, Weaknesses, Opportunities, Threats) framework to analyze the top competitors of a given company.
+
+Inputs:
+- Company name: {{company_name}}  
+
+Instructions:
+1. Identify if the user means by industry or by sector. If the user didn't provide that ask for that first.
+2. Identify 3–5 top competitors in the same industry as {{company_name}}, using market cap, business model, or product/service overlap as criteria.
+3. For each competitor, provide a concise SWOT analysis with 2–3 points per quadrant.
+4. Present the findings in a structured format, labeling each competitor clearly.
+
+Output Format:
+- Competitor 1: {{name}}
+  - Strengths:
+  - Weaknesses:
+  - Opportunities:
+  - Threats:
+- (Repeat for each competitor)
+"""
+
 
 async def app():
     initiate_default_session_state()
