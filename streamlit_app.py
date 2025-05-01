@@ -89,8 +89,8 @@ def main_app_sidebar():
 
 original_system_prompt_OLD = """You are an expert strategist for a company. 
 You are tasked with determining the competitors for the company based on its sector or industry.
-The company has provided you with the the name of the company or the Yahoo Finance ticker symbol of the company. 
-Your goal is to make a competitor analysis with the SWOT framework.
+The company has provided you with the name of the company or the Yahoo Finance ticker symbol of the company. 
+Your goal is to make a SWOT analysis for each competitor.
 """
 
 original_system_prompt = """Role: You are an expert business strategist conducting a competitor analysis.
