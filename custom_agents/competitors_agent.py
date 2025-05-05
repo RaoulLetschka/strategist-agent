@@ -39,10 +39,7 @@ def determine_competitors(company_ticker: str, sector_or_industry: Literal["sect
     
     view = yf.Sector(company.info[sector_or_industry]) if sector_or_industry == "sectorKey" else yf.Industry(company.info[sector_or_industry])
     competitors = view.top_companies.drop(columns='rating').reset_index().to_dict('records')
-    print(competitors)
     overview = view.overview
-    print(overview)
-    print()
 
     return competitors, overview
 

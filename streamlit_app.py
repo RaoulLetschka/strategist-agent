@@ -1,9 +1,16 @@
 import os
 import asyncio
 import streamlit as st
-from agents import Runner, set_default_openai_key, set_tracing_export_api_key, gen_trace_id, trace
+from agents import (
+    Runner, 
+    set_default_openai_key, 
+    set_tracing_export_api_key, 
+    gen_trace_id, 
+    trace,
+    ModelSettings
+)
 from openai.types.responses import ResponseTextDeltaEvent
-from custom_agents.competitors_agent import competitors_agent
+from custom_agents.competitors_agent import get_competitors_agent
 from manager import SWOTAnalysisManager
 
 from custom_agents.base_agent import BaseAgent
@@ -22,6 +29,18 @@ def initiate_default_session_state():
 
     if 'selected_agent' not in st.session_state:
         st.session_state.selected_agent = 0
+
+    if 'temperature' not in st.session_state:
+        st.session_state.temperature = 0.5
+    
+    if 'top_p' not in st.session_state:
+        st.session_state.top_p = 1.0
+
+    if 'max_tokens' not in st.session_state:
+        st.session_state.max_tokens = 1000
+
+    if 'tool_choice' not in st.session_state:
+        st.session_state.tool_choice = "auto"
 
 agent_options = [
     "Chatbot Agent",
@@ -69,6 +88,10 @@ def main_app_sidebar():
             height=200, 
             key="system_prompt"
         )
+        st.session_state.tool_choice = st.sidebar.selectbox(
+            "Tool Choice",
+            options=["auto", "required", "none"],
+        )
 
     if st.session_state.selected_agent == "Chatbot Agent":
         st.sidebar.title("Choose Model")
@@ -77,20 +100,36 @@ def main_app_sidebar():
             options=model_options
         )
 
-        # TODO: Decide if we want to keep this
-        # st.session_state.temperature = st.sidebar.slider(
-        #     "Temperature",
-        #     min_value=0.0,
-        #     max_value=1.0,
-        #     value=0.5,
-        #     step=0.1,
-        #     format="%.1f",
-        # )
+        st.session_state.temperature = st.sidebar.slider(
+            "Temperature",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            step=0.1,
+            format="%.1f",
+        )
+
+        st.session_state.top_p = st.sidebar.slider(
+            "Top P",
+            min_value=0.0,
+            max_value=1.0,
+            value=1.0,
+            step=0.1,
+            format="%.1f",
+        )
+
+        st.session_state.max_tokens = st.sidebar.number_input(
+            "Max Tokens",
+            min_value=500,
+            max_value=5000,
+            value=1000,
+        )
+
 
 original_system_prompt_OLD = """You are an expert strategist for a company. 
 You are tasked with determining the competitors for the company based on its sector or industry.
-The company has provided you with the the name of the company or the Yahoo Finance ticker symbol of the company. 
-Your goal is to make a competitor analysis with the SWOT framework.
+The company has provided you with the name of the company or the Yahoo Finance ticker symbol of the company. 
+Your goal is to make a SWOT analysis for each competitor.
 """
 
 original_system_prompt = """Role: You are an expert business strategist conducting a competitor analysis.
@@ -127,7 +166,7 @@ async def app():
     with col2:
         st.button("Clear Chat", on_click=lambda: st.session_state.update(messages=[]))
 
-    competitors_agent.instructions = st.session_state.system_prompt
+    
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"], unsafe_allow_html=True)
@@ -142,7 +181,13 @@ async def app():
         
         if st.session_state.selected_agent == "Competitors Agent":
             with trace("Competitors Agent Trace", trace_id=trace_id):
-                # TODO: refactor competitor agent to use the new agent system
+                competitors_agent = get_competitors_agent(
+                    model_settings=ModelSettings(
+                        tool_choice=st.session_state.tool_choice,
+                    )
+                )
+
+                competitors_agent.instructions = st.session_state.system_prompt
                 competitors_agent_result = Runner.run_streamed(competitors_agent, st.session_state.messages)
                 competitors_agent_answer = await stream_chat_message(competitors_agent_result)
                 st.session_state.messages.append({"role": "assistant", "content": competitors_agent_answer})
@@ -191,6 +236,11 @@ async def app():
                 chosen_agent = BaseAgent(
                     name="Chatbot Agent",
                     deployment=model_options[st.session_state.model],
+                    model_settings=ModelSettings(
+                        temperature=st.session_state.temperature,
+                        top_p=st.session_state.top_p,
+                        max_tokens=st.session_state.max_tokens,
+                    ),
                 )
                 result = chosen_agent.execute_streamed(st.session_state.messages)
                 answer = await stream_chat_message(result)
