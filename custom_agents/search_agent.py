@@ -1,7 +1,11 @@
-from agents import WebSearchTool
+import asyncio
+
+from agents import WebSearchTool, custom_span
 from agents.model_settings import ModelSettings
 from .base_agent import BaseAgent
 from .config import settings
+
+from custom_agents.planner_agent import WebSearchItem, WebSearchPlan
 
 class SearchAgent(BaseAgent):
     INSTRUCTIONS = (
@@ -31,3 +35,17 @@ class SearchAgent(BaseAgent):
             model_settings=ModelSettings(tool_choice="required"),
             tools=[WebSearchTool()],
         )
+
+    async def perform_search(self, planner_result) -> str:
+        tasks = [asyncio.create_task(self.search(item)) for item in planner_result.final_output_as(WebSearchPlan).searches]
+        with custom_span("Search for all items"):
+            search_resutls = []
+            for task in asyncio.as_completed(tasks):
+                result = await task
+                search_resutls.append(result)
+            return search_resutls
+    
+    async def search(self, item: WebSearchItem):
+        input_data = f"Search term: {item.query}\nReason: {item.reason}\n"
+        result = await self.execute(input_data)
+        return result.final_output

@@ -71,3 +71,7 @@ class SWOTAgent(BaseAgent):
             output_type=SWOTAnalysisResult,
             model_settings=ModelSettings(tool_choice="required")
         )
+
+    async def perform_swot_analysis(self, query: str, search_resutls: str):
+        input_data = f"Original query: {query}\nSummarized search results: {search_resutls}"
+        return await self.execute(input_data, max_turns=20)

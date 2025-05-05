@@ -10,11 +10,12 @@ from agents import (
     ModelSettings
 )
 from openai.types.responses import ResponseTextDeltaEvent
-from custom_agents.competitors_agent import get_competitors_agent
-from manager import SWOTAnalysisManager
 
+from custom_agents.competitors_agent import CompetitorsAgent
 from custom_agents.base_agent import BaseAgent
-from custom_agents.planner_agent import WebSearchPlan
+from custom_agents.planner_agent import PlannerAgent
+from custom_agents.search_agent import SearchAgent
+from custom_agents.swot_agent import SWOTAgent
 from custom_agents.config import settings
 
 set_default_openai_key(settings.openai_api_key)
@@ -181,11 +182,11 @@ async def app():
         
         if st.session_state.selected_agent == "Competitors Agent":
             with trace("Competitors Agent Trace", trace_id=trace_id):
-                competitors_agent = get_competitors_agent(
+                competitors_agent = CompetitorsAgent(
                     model_settings=ModelSettings(
                         tool_choice=st.session_state.tool_choice,
                     )
-                )
+                ).agent
 
                 competitors_agent.instructions = st.session_state.system_prompt
                 competitors_agent_result = Runner.run_streamed(competitors_agent, st.session_state.messages)
@@ -194,11 +195,12 @@ async def app():
 
         elif st.session_state.selected_agent == "SWOT Agent":
             with trace("SWOT Agent Trace", trace_id=trace_id):
-                chosen_agent = SWOTAnalysisManager()
+                # Planner Agent
+                planner_agent = PlannerAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    planner_result = await chosen_agent.planner_agent.execute(f"Query: {st.session_state.messages}")
+                    planner_result = await planner_agent.execute(f"Query: {st.session_state.messages}")
                     n = 1
                     planner_answer = "### Planner Agent's Result:\n"
                     for item in planner_result.final_output.searches:
@@ -207,20 +209,24 @@ async def app():
                     message_placeholder.markdown(planner_answer, unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": planner_answer})
 
+                # Search Agent
+                search_agent = SearchAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    search_plan = await chosen_agent.perform_search(planner_result)
+                    search_plan = await search_agent.perform_search(planner_result)
                     search_answer = "## Search Agent's Result:\n"
                     for search in search_plan:
                         search_answer += search
                     message_placeholder.markdown(search_answer, unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": search_answer})
 
+                # SWOT Agent
+                swot_agent = SWOTAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    swot_result = await chosen_agent.perform_swot_analysis(st.session_state.messages, str(search_plan))
+                    swot_result = await swot_agent.perform_swot_analysis(st.session_state.messages, str(search_plan))
                     swot_answer = (
                         "## SWOT Agent's Result:  \n  "
                         f"### SWOT Summary:\n   {swot_result.final_output.swot_summary}   \n   "

@@ -56,21 +56,26 @@ get_ticker_agent = Agent(
 def dynamic_instructions(system_prompt: str) -> str:
     return system_prompt
 
-def get_competitors_agent(**kwargs) -> Agent:
-    competitors_agent = Agent(
-        name="Competitors Agent",
-        instructions=dynamic_instructions,
-        model=OpenAIChatCompletionsModel(
-            model=settings.gpt4o_mini_deployment,
-            openai_client=AzureOpenAIClient.create_async_client(settings.gpt4o_mini_deployment),
-        ),
-        tools=[
-            get_ticker_agent.as_tool(
-                tool_name="get_ticker",
-                tool_description="Get ticker and name of a company"
+class CompetitorsAgent():
+    """
+    CompetitorsAgent is an agent that determines the top competitors of a given company based on its sector or industry.
+    It uses the yfinance library to fetch the company's information and the competitors' data.
+    """
+
+    def __init__(self, **kwargs):
+        self.agent = Agent(
+            name="Competitors Agent",
+            instructions=dynamic_instructions,
+            model=OpenAIChatCompletionsModel(
+                model=settings.gpt4o_mini_deployment,
+                openai_client=AzureOpenAIClient.create_async_client(settings.gpt4o_mini_deployment),
             ),
-            determine_competitors,
-        ],
-        **kwargs
-    )
-    return competitors_agent
+            tools=[
+                get_ticker_agent.as_tool(
+                    tool_name="get_ticker",
+                    tool_description="Get ticker and name of a company"
+                ),
+                determine_competitors,
+            ],
+            **kwargs
+        )
