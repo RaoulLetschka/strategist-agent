@@ -59,20 +59,21 @@ get_ticker_agent = Agent(
 def dynamic_instructions(system_prompt: str) -> str:
     return system_prompt
 
-competitors_agent = Agent(
-    name="Competitors Agent",
-    instructions=dynamic_instructions,
-    model=OpenAIChatCompletionsModel(
-        model=settings.gpt4o_mini_deployment,
-        openai_client=AzureOpenAIClient.create_async_client(settings.gpt4o_mini_deployment),
-    ),
-    tools=[
-        get_ticker_agent.as_tool(
-            tool_name="get_ticker",
-            tool_description="Get ticker and name of a company"
+def get_competitors_agent(**kwargs) -> Agent:
+    competitors_agent = Agent(
+        name="Competitors Agent",
+        instructions=dynamic_instructions,
+        model=OpenAIChatCompletionsModel(
+            model=settings.gpt4o_mini_deployment,
+            openai_client=AzureOpenAIClient.create_async_client(settings.gpt4o_mini_deployment),
         ),
-        determine_competitors,
-    ]
-)
-
-
+        tools=[
+            get_ticker_agent.as_tool(
+                tool_name="get_ticker",
+                tool_description="Get ticker and name of a company"
+            ),
+            determine_competitors,
+        ],
+        **kwargs
+    )
+    return competitors_agent
