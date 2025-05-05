@@ -39,10 +39,7 @@ def determine_competitors(company_ticker: str, sector_or_industry: Literal["sect
     
     view = yf.Sector(company.info[sector_or_industry]) if sector_or_industry == "sectorKey" else yf.Industry(company.info[sector_or_industry])
     competitors = view.top_companies.drop(columns='rating').reset_index().to_dict('records')
-    print(competitors)
     overview = view.overview
-    print(overview)
-    print()
 
     return competitors, overview
 
@@ -59,20 +56,26 @@ get_ticker_agent = Agent(
 def dynamic_instructions(system_prompt: str) -> str:
     return system_prompt
 
-competitors_agent = Agent(
-    name="Competitors Agent",
-    instructions=dynamic_instructions,
-    model=OpenAIChatCompletionsModel(
-        model=settings.gpt4o_mini_deployment,
-        openai_client=AzureOpenAIClient.create_async_client(settings.gpt4o_mini_deployment),
-    ),
-    tools=[
-        get_ticker_agent.as_tool(
-            tool_name="get_ticker",
-            tool_description="Get ticker and name of a company"
-        ),
-        determine_competitors,
-    ]
-)
+class CompetitorsAgent():
+    """
+    CompetitorsAgent is an agent that determines the top competitors of a given company based on its sector or industry.
+    It uses the yfinance library to fetch the company's information and the competitors' data.
+    """
 
-
+    def __init__(self, **kwargs):
+        self.agent = Agent(
+            name="Competitors Agent",
+            instructions=dynamic_instructions,
+            model=OpenAIChatCompletionsModel(
+                model=settings.gpt4o_mini_deployment,
+                openai_client=AzureOpenAIClient.create_async_client(settings.gpt4o_mini_deployment),
+            ),
+            tools=[
+                get_ticker_agent.as_tool(
+                    tool_name="get_ticker",
+                    tool_description="Get ticker and name of a company"
+                ),
+                determine_competitors,
+            ],
+            **kwargs
+        )
