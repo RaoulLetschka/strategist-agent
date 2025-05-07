@@ -100,31 +100,31 @@ def main_app_sidebar():
             "Select a model",
             options=model_options
         )
+        if st.session_state.model != "o3-mini":
+            st.session_state.temperature = st.sidebar.slider(
+                "Temperature",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.5,
+                step=0.1,
+                format="%.1f",
+            )
 
-        st.session_state.temperature = st.sidebar.slider(
-            "Temperature",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.5,
-            step=0.1,
-            format="%.1f",
-        )
+            st.session_state.top_p = st.sidebar.slider(
+                "Top P",
+                min_value=0.0,
+                max_value=1.0,
+                value=1.0,
+                step=0.1,
+                format="%.1f",
+            )
 
-        st.session_state.top_p = st.sidebar.slider(
-            "Top P",
-            min_value=0.0,
-            max_value=1.0,
-            value=1.0,
-            step=0.1,
-            format="%.1f",
-        )
-
-        st.session_state.max_tokens = st.sidebar.number_input(
-            "Max Tokens",
-            min_value=500,
-            max_value=5000,
-            value=1000,
-        )
+            st.session_state.max_tokens = st.sidebar.number_input(
+                "Max Tokens",
+                min_value=500,
+                max_value=5000,
+                value=1000,
+            )
 
 
 original_system_prompt_OLD = """You are an expert strategist for a company. 
@@ -239,14 +239,19 @@ async def app():
                 st.session_state.messages.append({"role": "assistant", "content": swot_answer})
         else:
             with trace("Chatbot Agent Trace", trace_id=trace_id):
-                chosen_agent = BaseAgent(
-                    name="Chatbot Agent",
-                    deployment=model_options[st.session_state.model],
-                    model_settings=ModelSettings(
+                # Chatbot Agent
+                if st.session_state.model == "o3-mini":
+                    model_settings = ModelSettings()
+                else:
+                    model_settings = ModelSettings(
                         temperature=st.session_state.temperature,
                         top_p=st.session_state.top_p,
                         max_tokens=st.session_state.max_tokens,
-                    ),
+                    )
+                chosen_agent = BaseAgent(
+                    name="Chatbot Agent",
+                    deployment=model_options[st.session_state.model],
+                    model_settings=model_settings,
                 )
                 result = chosen_agent.execute_streamed(st.session_state.messages)
                 answer = await stream_chat_message(result)
