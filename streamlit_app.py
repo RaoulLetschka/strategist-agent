@@ -10,11 +10,12 @@ from agents import (
     ModelSettings
 )
 from openai.types.responses import ResponseTextDeltaEvent
-from custom_agents.competitors_agent import CompetitorsAgent
-from manager import SWOTAnalysisManager
 
+from custom_agents.competitors_agent import CompetitorsAgent
 from custom_agents.base_agent import BaseAgent
-from custom_agents.planner_agent import WebSearchPlan
+from custom_agents.planner_agent import PlannerAgent
+from custom_agents.search_agent import SearchAgent
+from custom_agents.swot_agent import SWOTAgent
 from custom_agents.config import settings
 
 set_default_openai_key(settings.openai_api_key)
@@ -99,31 +100,31 @@ def main_app_sidebar():
             "Select a model",
             options=model_options
         )
+        if st.session_state.model != "o3-mini":
+            st.session_state.temperature = st.sidebar.slider(
+                "Temperature",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.5,
+                step=0.1,
+                format="%.1f",
+            )
 
-        st.session_state.temperature = st.sidebar.slider(
-            "Temperature",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.5,
-            step=0.1,
-            format="%.1f",
-        )
+            st.session_state.top_p = st.sidebar.slider(
+                "Top P",
+                min_value=0.0,
+                max_value=1.0,
+                value=1.0,
+                step=0.1,
+                format="%.1f",
+            )
 
-        st.session_state.top_p = st.sidebar.slider(
-            "Top P",
-            min_value=0.0,
-            max_value=1.0,
-            value=1.0,
-            step=0.1,
-            format="%.1f",
-        )
-
-        st.session_state.max_tokens = st.sidebar.number_input(
-            "Max Tokens",
-            min_value=500,
-            max_value=5000,
-            value=1000,
-        )
+            st.session_state.max_tokens = st.sidebar.number_input(
+                "Max Tokens",
+                min_value=500,
+                max_value=5000,
+                value=1000,
+            )
 
 
 original_system_prompt_OLD = """You are an expert strategist for a company. 
@@ -194,11 +195,12 @@ async def app():
 
         elif st.session_state.selected_agent == "SWOT Agent":
             with trace("SWOT Agent Trace", trace_id=trace_id):
-                chosen_agent = SWOTAnalysisManager()
+                # Planner Agent
+                planner_agent = PlannerAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    planner_result = await chosen_agent.planner_agent.execute(f"Query: {st.session_state.messages}")
+                    planner_result = await planner_agent.execute(f"Query: {st.session_state.messages}")
                     n = 1
                     planner_answer = "### Planner Agent's Result:\n"
                     for item in planner_result.final_output.searches:
@@ -207,20 +209,24 @@ async def app():
                     message_placeholder.markdown(planner_answer, unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": planner_answer})
 
+                # Search Agent
+                search_agent = SearchAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    search_plan = await chosen_agent.perform_search(planner_result)
+                    search_plan = await search_agent.perform_search(planner_result)
                     search_answer = "## Search Agent's Result:\n"
                     for search in search_plan:
                         search_answer += search
                     message_placeholder.markdown(search_answer, unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": search_answer})
 
+                # SWOT Agent
+                swot_agent = SWOTAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    swot_result = await chosen_agent.perform_swot_analysis(st.session_state.messages, str(search_plan))
+                    swot_result = await swot_agent.perform_swot_analysis(st.session_state.messages, str(search_plan))
                     swot_answer = (
                         "## SWOT Agent's Result:  \n  "
                         f"### SWOT Summary:\n   {swot_result.final_output.swot_summary}   \n   "
@@ -233,14 +239,19 @@ async def app():
                 st.session_state.messages.append({"role": "assistant", "content": swot_answer})
         else:
             with trace("Chatbot Agent Trace", trace_id=trace_id):
-                chosen_agent = BaseAgent(
-                    name="Chatbot Agent",
-                    deployment=model_options[st.session_state.model],
-                    model_settings=ModelSettings(
+                # Chatbot Agent
+                if st.session_state.model == "o3-mini":
+                    model_settings = ModelSettings()
+                else:
+                    model_settings = ModelSettings(
                         temperature=st.session_state.temperature,
                         top_p=st.session_state.top_p,
                         max_tokens=st.session_state.max_tokens,
-                    ),
+                    )
+                chosen_agent = BaseAgent(
+                    name="Chatbot Agent",
+                    deployment=model_options[st.session_state.model],
+                    model_settings=model_settings,
                 )
                 result = chosen_agent.execute_streamed(st.session_state.messages)
                 answer = await stream_chat_message(result)

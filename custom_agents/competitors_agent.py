@@ -57,6 +57,10 @@ def dynamic_instructions(system_prompt: str) -> str:
     return system_prompt
 
 class CompetitorsAgent():
+    """
+    CompetitorsAgent is an agent that determines the top competitors of a given company based on its sector or industry.
+    It uses the yfinance library to fetch the company's information and the competitors' data.
+    """
 
     def __init__(self, **kwargs):
         self.agent = Agent(
@@ -75,5 +79,3 @@ class CompetitorsAgent():
             ],
             **kwargs
         )
-
-
