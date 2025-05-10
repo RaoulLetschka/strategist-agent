@@ -15,6 +15,8 @@ from custom_agents.competitors_agent import CompetitorsAgent
 from custom_agents.base_agent import BaseAgent
 from custom_agents.planner_agent import PlannerAgent
 from custom_agents.search_agent import SearchAgent
+from custom_agents.tenk_planner_agent import TenKPlannerAgent
+from custom_agents.tenk_agent import TenkAgent
 from custom_agents.swot_agent import SWOTAgent
 from custom_agents.config import settings
 
@@ -195,32 +197,68 @@ async def app():
 
         elif st.session_state.selected_agent == "SWOT Agent":
             with trace("SWOT Agent Trace", trace_id=trace_id):
-                # Planner Agent
-                planner_agent = PlannerAgent()
+                # Web Planner Agent
+                # planner_agent = PlannerAgent()
+                # with st.chat_message("assistant"):
+                #     message_placeholder = st.empty()
+                #     message_placeholder.markdown("...")
+                #     planner_result = await planner_agent.execute(f"Query: {st.session_state.messages}")
+                #     n = 1
+                #     planner_answer = "### Web Search Planner Agent's Result:\n"
+                #     for item in planner_result.final_output.searches:
+                #         planner_answer += f"{n}. **Search Query:** {item.query}   \n   **Reason:** {item.reason}\n"
+                #         n += 1
+                #     message_placeholder.markdown(planner_answer, unsafe_allow_html=True)
+                # st.session_state.messages.append({"role": "assistant", "content": planner_answer})
+
+                # # Search Agent
+                # search_agent = SearchAgent()
+                # with st.chat_message("assistant"):
+                #     message_placeholder = st.empty()
+                #     message_placeholder.markdown("...")
+                #     search_plan = await search_agent.perform_search(planner_result)
+                #     search_answer = "## Search Agent's Result:\n"
+                #     for search in search_plan:
+                #         search_answer += search
+                #     message_placeholder.markdown(search_answer, unsafe_allow_html=True)
+                # st.session_state.messages.append({"role": "assistant", "content": search_answer})
+
+                # 10K Search Plan
+                tenk_planner_agent = TenKPlannerAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    planner_result = await planner_agent.execute(f"Query: {st.session_state.messages}")
+                    tenk_planner_result = await tenk_planner_agent.execute(f"Query: {st.session_state.messages}")
                     n = 1
-                    planner_answer = "### Planner Agent's Result:\n"
-                    for item in planner_result.final_output.searches:
-                        planner_answer += f"{n}. **Search Query:** {item.query}   \n   **Reason:** {item.reason}\n"
+                    search_queries = tenk_planner_result.final_output.searches
+                    ten_k_planner_answer = "### 10k Filings Planner Agent's Result:\n"
+                    for item in search_queries:
+                        ten_k_planner_answer += f"{n}. **Search Query:** {item}\n"
                         n += 1
-                    message_placeholder.markdown(planner_answer, unsafe_allow_html=True)
-                st.session_state.messages.append({"role": "assistant", "content": planner_answer})
+                    message_placeholder.markdown(ten_k_planner_answer, unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": ten_k_planner_answer})
 
-                # Search Agent
-                search_agent = SearchAgent()
-                with st.chat_message("assistant"):
-                    message_placeholder = st.empty()
-                    message_placeholder.markdown("...")
-                    search_plan = await search_agent.perform_search(planner_result)
-                    search_answer = "## Search Agent's Result:\n"
-                    for search in search_plan:
-                        search_answer += search
-                    message_placeholder.markdown(search_answer, unsafe_allow_html=True)
-                st.session_state.messages.append({"role": "assistant", "content": search_answer})
+                tenk_agent = TenkAgent()
+                for search in search_queries:
+                    with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        message_placeholder.markdown("...")
+                        search_result = tenk_agent.run(search)
+                        search_answer = (
+                            f"## 10K Agent's Result for query: {search}:\n"
+                            f"### Answer:\n{search_result['result']}\n"
+                            f"### Source Documents:\n"
+                        )
+                        for doc in search_result["source_documents"]:
+                            search_answer += (
+                                f"- {doc.metadata['company']} ({doc.metadata['year']}, "
+                                f"{doc.metadata['tenkpage']}): {doc.page_content[:500]}…\n"
+                            )
+                        message_placeholder.markdown(search_answer, unsafe_allow_html=True)
+                    st.session_state.messages.append({"role": "assistant", "content": search_answer})
 
+
+                search_plan = ['No information found']
                 # SWOT Agent
                 swot_agent = SWOTAgent()
                 with st.chat_message("assistant"):
