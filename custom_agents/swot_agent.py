@@ -22,6 +22,12 @@ class SWOTAnalysisResult(BaseModel):
     swot_summary: str
     """A summary of the SWOT analysis."""
 
+    summary_web_search: str
+    """A summary of the web search results."""
+    
+    summary_10k_search: str
+    """A summary of the 10-K search results."""
+
 INSTRUCTIONS = (
     "You are a business analyst tasked with performing a comprehensive SWOT analysis for a company. "
     "You have access to four specialized sub-agents that provide detailed analyses of the company’s strengths, weaknesses, opportunities, and threats respectively. "
@@ -37,7 +43,7 @@ class SWOTAgent(BaseAgent):
     INSTRUCTIONS = (
         "You are a business analyst tasked with performing a comprehensive SWOT analysis for a company. "
         "You have access to four specialized sub-agents that provide detailed analyses of the company’s strengths, weaknesses, opportunities, and threats respectively. "
-        "You MUST use ONLY the information provided by the search results that a user has given to you. "
+        "You MUST use ONLY the information provided by the web search results and/or 10k-filings search results that a user has given to you. "
         "If no information is provided, you should return 'No information has been given to me.'. "
         "Your task is to:"
         "1.	Query each sub-agent for their respective analysis strictly based on the company’s available data."
@@ -75,6 +81,10 @@ class SWOTAgent(BaseAgent):
             model_settings=ModelSettings(tool_choice="required")
         )
 
-    async def perform_swot_analysis(self, query: str, search_resutls: str):
-        input_data = f"Original query: {query}\nSummarized search results: {search_resutls}"
+    async def perform_swot_analysis(self, query: str, web_search_resutls: str, tenk_search_resutls: str):
+        input_data = (
+            f"Original query: {query}\n"
+            f"Summarized web search results: {web_search_resutls}\n"
+            f"Summarized 10k-filings search results: {tenk_search_resutls}\n"
+        )
         return await self.execute(input_data, max_turns=20)
