@@ -20,7 +20,8 @@ def _swot_category_instructions(category: str) -> str:
         "You are a business analyst tasked with performing an analysis for a company for "
         f"the {category} of the 4 SWOT categories 'STRENGTHS', 'WEAKNESSES', 'OPPORTUNITIES', 'THREATS'. "
         "You will be provided with the company's name and input text that is the basis for you analysis. "
-        "Use only the input text to perform the analysis. "
+        "You MUST use ONLY the information provided by the search results that a user has given to you to perform the analysis. "
+        "If no information is provided, you should return 'No information has been given to me.'. "
         "You should provide the analysis itself and a summary of the analysis.\n"
         "The analysis should be detailed and provide insights into the company's position in the market."
     )

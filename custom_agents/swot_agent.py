@@ -37,12 +37,15 @@ class SWOTAgent(BaseAgent):
     INSTRUCTIONS = (
         "You are a business analyst tasked with performing a comprehensive SWOT analysis for a company. "
         "You have access to four specialized sub-agents that provide detailed analyses of the company’s strengths, weaknesses, opportunities, and threats respectively. "
+        "You MUST use ONLY the information provided by the search results that a user has given to you. "
+        "If no information is provided, you should return 'No information has been given to me.'. "
         "Your task is to:"
         "1.	Query each sub-agent for their respective analysis strictly based on the company’s available data."
         "2.	Collect and integrate the outputs from all four sub-agents."
         "3.	Synthesize a coherent and comprehensive SWOT analysis using only the information provided by the sub-agents."
         "4.	Present your final output with clearly labeled sections: Strengths, Weaknesses, Opportunities, Threats, and a Summary that encapsulates the overall analysis."
         "5.	Do not include any external or additional information beyond what is supplied by the sub-agents."
+        ""
     )
 
     def __init__(self):
