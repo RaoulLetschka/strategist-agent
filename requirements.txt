@@ -13,3 +13,4 @@ azure-search-documents
 langchain-openai
 langchain-core
 langchain
+PyPDF2

@@ -25,7 +25,8 @@ competitors = {
     "AppLovin Corporation": "APP",
     "Cadence Design Systems, Inc.": "CDNS",
     "MicroStrategy Incorporated": "MSTR",
-    "Workday, Inc.": "WDAY"
+    "Workday, Inc.": "WDAY",
+    "SAP SE": "SAP",
 }
 
 class TenKSearchPlan(BaseModel):
