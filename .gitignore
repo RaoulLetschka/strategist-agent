@@ -1,3 +1,5 @@
+BACKUP-ENV.txt
+
 .streamlit/secrets.toml
 playground.py
 playground.ipynb

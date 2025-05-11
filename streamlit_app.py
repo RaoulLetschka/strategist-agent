@@ -15,6 +15,8 @@ from custom_agents.competitors_agent import CompetitorsAgent
 from custom_agents.base_agent import BaseAgent
 from custom_agents.planner_agent import PlannerAgent
 from custom_agents.search_agent import SearchAgent
+from custom_agents.tenk_planner_agent import TenKPlannerAgent
+from custom_agents.tenk_agent import TenkAgent
 from custom_agents.swot_agent import SWOTAgent
 from custom_agents.config import settings
 
@@ -172,10 +174,10 @@ async def app():
         with st.chat_message(message["role"]):
             st.markdown(message["content"], unsafe_allow_html=True)
 
-    if prompt := st.chat_input("Ask a question"):
-        st.chat_message("user").markdown(prompt)
+    if user_query := st.chat_input("Ask a question"):
+        st.chat_message("user").markdown(user_query)
 
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state.messages.append({"role": "user", "content": user_query})
         answer = "THIS SHOULD NOT BE SEEN"
 
         trace_id = gen_trace_id()
@@ -195,14 +197,14 @@ async def app():
 
         elif st.session_state.selected_agent == "SWOT Agent":
             with trace("SWOT Agent Trace", trace_id=trace_id):
-                # Planner Agent
+                # Web Planner Agent
                 planner_agent = PlannerAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    planner_result = await planner_agent.execute(f"Query: {st.session_state.messages}")
+                    planner_result = await planner_agent.execute(f"Query: {user_query}")
                     n = 1
-                    planner_answer = "### Planner Agent's Result:\n"
+                    planner_answer = "### Web Search Planner Agent's Result:\n"
                     for item in planner_result.final_output.searches:
                         planner_answer += f"{n}. **Search Query:** {item.query}   \n   **Reason:** {item.reason}\n"
                         n += 1
@@ -214,19 +216,33 @@ async def app():
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    search_plan = await search_agent.perform_search(planner_result)
-                    search_answer = "## Search Agent's Result:\n"
-                    for search in search_plan:
+                    search_result = await search_agent.perform_search(planner_result)
+                    search_answer = "## Web Search Agent's Result:\n"
+                    for search in search_result:
                         search_answer += search
                     message_placeholder.markdown(search_answer, unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": search_answer})
+
+                tenk_agent = TenkAgent()
+                # for search in search_queries:
+                with st.chat_message("assistant"):
+                    message_placeholder = st.empty()
+                    message_placeholder.markdown("...")
+                    tenk_result = await tenk_agent.execute(f"Query: {user_query}", max_turns=20)
+                    tenk_search_answer = "## 10k-Filing Agent's Result:\n" + tenk_result.final_output
+                    message_placeholder.markdown(tenk_search_answer, unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": tenk_result})
 
                 # SWOT Agent
                 swot_agent = SWOTAgent()
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     message_placeholder.markdown("...")
-                    swot_result = await swot_agent.perform_swot_analysis(st.session_state.messages, str(search_plan))
+                    swot_result = await swot_agent.perform_swot_analysis(
+                        user_query, 
+                        str(search_result), 
+                        tenk_result
+                    )
                     swot_answer = (
                         "## SWOT Agent's Result:  \n  "
                         f"### SWOT Summary:\n   {swot_result.final_output.swot_summary}   \n   "
@@ -234,6 +250,8 @@ async def app():
                         f"### Weaknesses:\n   {swot_result.final_output.weaknesses}   \n   "
                         f"### Opportunities:\n   {swot_result.final_output.opportunities}   \n   "
                         f"### Threats:\n   {swot_result.final_output.threats}   \n   "
+                        f"### Web Search Summary:\n   {swot_result.final_output.summary_web_search}   \n   "
+                        f"### 10k Filing Search Summary:\n   {swot_result.final_output.summary_10k_search}   \n   "
                     )
                     message_placeholder.markdown(swot_answer)
                 st.session_state.messages.append({"role": "assistant", "content": swot_answer})

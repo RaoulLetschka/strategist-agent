@@ -8,3 +8,9 @@ uvicorn==0.34.0
 fastapi==0.115.12
 rich
 pydantic-settings
+azure-core
+azure-search-documents
+langchain-openai
+langchain-core
+langchain
+PyPDF2

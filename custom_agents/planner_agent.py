@@ -1,6 +1,4 @@
 from pydantic import BaseModel
-from agents import Agent
-
 from .base_agent import BaseAgent
 from .config import settings
 
@@ -42,7 +40,3 @@ class PlannerAgent(BaseAgent):
             deployment=settings.o3_mini_deployment,
             output_type=WebSearchPlan,
         )
-
-        @property
-        def output_type(self):
-            return self.output_type

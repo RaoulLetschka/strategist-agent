@@ -1,7 +1,9 @@
 # base.py
-from agents import Agent, OpenAIChatCompletionsModel, Runner
+from agents import Agent, OpenAIChatCompletionsModel, Runner, ModelSettings
 from .models.azure_openai_client import AzureOpenAIClient
 from .config import settings
+
+# temp .2, top-P of .95, and top-K of 30 
 
 class BaseAgent:
     def __init__(
