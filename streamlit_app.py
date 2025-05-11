@@ -44,6 +44,9 @@ def initiate_default_session_state():
 
     if 'tool_choice' not in st.session_state:
         st.session_state.tool_choice = "auto"
+    
+    if 'max_retrieved_chunks' not in st.session_state:
+        st.session_state.max_retrieved_chunks = 5
 
 agent_options = [
     "Chatbot Agent",
@@ -74,6 +77,7 @@ async def stream_chat_message(result):
 
 
 def main_app_sidebar():
+    st.sidebar.button("Clear Chat", on_click=lambda: st.session_state.update(messages=[]))
     st.sidebar.title("Choose Agent")
     st.session_state.selected_agent = st.sidebar.radio(
         "Select an agent",
@@ -127,6 +131,16 @@ def main_app_sidebar():
                 max_value=5000,
                 value=1000,
             )
+    elif st.session_state.selected_agent == "SWOT Agent":
+        st.sidebar.title("Choose max retrieved chunks")
+        st.session_state.max_retrieved_chunks = st.sidebar.number_input(
+            "Max Retrieved Chunks",
+            min_value=1,
+            max_value=10,
+            value=5,
+        )
+
+
 
 
 original_system_prompt_OLD = """You are an expert strategist for a company. 
@@ -163,11 +177,7 @@ async def app():
 
     main_app_sidebar()
 
-    col1, col2 = st.columns([0.8, 0.2], vertical_alignment="bottom")
-    with col1:
-        st.title("Strategist Agent")
-    with col2:
-        st.button("Clear Chat", on_click=lambda: st.session_state.update(messages=[]))
+    st.title("Strategist Agent")
 
     
     for message in st.session_state.messages:
@@ -223,7 +233,7 @@ async def app():
                     message_placeholder.markdown(search_answer, unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": search_answer})
 
-                tenk_agent = TenkAgent()
+                tenk_agent = TenkAgent(k=st.session_state.max_retrieved_chunks)
                 # for search in search_queries:
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
@@ -250,11 +260,18 @@ async def app():
                         f"### Weaknesses:\n   {swot_result.final_output.weaknesses}   \n   "
                         f"### Opportunities:\n   {swot_result.final_output.opportunities}   \n   "
                         f"### Threats:\n   {swot_result.final_output.threats}   \n   "
-                        f"### Web Search Summary:\n   {swot_result.final_output.summary_web_search}   \n   "
-                        f"### 10k Filing Search Summary:\n   {swot_result.final_output.summary_10k_search}   \n   "
+                    )
+                    search_summaries_text = (
+                        "### Search Summaries:  \n"
+                        "**Web Search Summary:**\n"
+                        f"   {swot_result.final_output.summary_web_search}   \n\n   "
+                        "**10k Filing Search Summary:**\n"
+                        f"   {swot_result.final_output.summary_10k_search}   \n   "
                     )
                     message_placeholder.markdown(swot_answer)
-                st.session_state.messages.append({"role": "assistant", "content": swot_answer})
+                    with st.expander("Show Search Summaries", expanded=False):
+                        st.markdown(search_summaries_text, unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": swot_answer + search_summaries_text})
         else:
             with trace("Chatbot Agent Trace", trace_id=trace_id):
                 # Chatbot Agent

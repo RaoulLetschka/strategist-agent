@@ -70,7 +70,7 @@ class TenkAgent(BaseAgent):
     5. Answer the user’s question using ONLY that context.
     6. Include any financial data present.
     7. Identify the company name and year, and state them.
-    8. ALWAYS cite the source documents in your answer.
+    8. ALWAYS cite the source documents with page numbers and the respective year in your answer.
     If no relevant information is found, respond with “No relevant 10-k filing information found.” 
     """
 
